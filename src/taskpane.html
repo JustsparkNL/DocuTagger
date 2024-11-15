@@ -20,7 +20,7 @@
 
 <body class="ms-font-m ms-welcome ms-Fabric">
     <header class="ms-welcome__header ms-bgColor-neutralLighter">
-        <img  height="90" src="../../assets/visiedosis.png" alt="Contoso" title="Contoso" />
+        <img  height="90" src="../../assets/visiedosis.png" alt="visi" title="Contoso" />
         <!-- <h1 class="ms-font-su">VisieDosis Add-In</h1> -->
     </header>
     <section id="sideload-msg" class="ms-welcome__main">
@@ -50,5 +50,51 @@
         <p><label id="item-subject"></label></p>
     </main>
 </body>
+<script>
+Office.onReady((info) => {
+  if (info.host === Office.HostType.Word) {
+    document.getElementById("sideload-msg").style.display = "none";
+    document.getElementById("app-body").style.display = "flex";
+    document.getElementById("run").onclick = replaceID;
+  }
+});
+function replaceID() {
+      return Word.run(async (context) => {
+    // Load custom properties
+    const metadataID = context.document.properties.customProperties;
+    metadataID.load("key, value");
+    await context.sync();
+
+    // Find the custom property with key "VD_ID"
+    const resultId = metadataID.items.find(meta => meta.key === "VD_ID");
+
+    // Use a placeholder value for testing if the custom property is not found
+    const replacementText = resultId ? resultId.value : "TESTED";
+
+    // Search for {{ID}} in the document and replace it with the replacement text
+    const searchResults = context.document.body.search("{{ID}}", {matchCase: true, matchWholeWord: true});
+    context.load(searchResults, "text");
+    await context.sync();
+
+    if (searchResults.items.length > 0) {
+      searchResults.items.forEach(item => {
+        item.insertText(replacementText, Word.InsertLocation.replace);
+      });
+    } else {
+      console.log("The placeholder '{{ID}}' was not found in the document.");
+    }
+
+    // Display all custom properties in the console for debugging
+    document.getElementById("test").innerHTML = "";
+    metadataID.items.forEach(item => {
+      console.log(`Custom property: Key = ${item.key}, Value = ${item.value}`);
+      document.getElementById("test").innerHTML += `Key: ${item.key}, Value: ${item.value}<br>`;
+    });
+
+    await context.sync();
+  });
+}
+
+</script>
 
 </html>

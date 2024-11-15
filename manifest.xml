@@ -4,19 +4,19 @@
   <Version>1.0.0.0</Version>
   <ProviderName>Uninova B.V.</ProviderName>
   <DefaultLocale>nl-NL</DefaultLocale>
-  <DisplayName DefaultValue="VisieDosis"/>
-  <Description DefaultValue="Een office integratie van VisieDosis"/>
-  <IconUrl DefaultValue="https://localhost:3000/assets/visiedosis_logo.png"/>
-  <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/visiedosis_logo.png"/>
-  <SupportUrl DefaultValue="https://www.contoso.com/help"/>
+  <DisplayName DefaultValue="DocuTagger by Uninova"/>
+  <Description DefaultValue="Een document tagger add-in van Uninova"/>
+  <IconUrl DefaultValue="https://justsparknl.github.io/DocuTagger/assets/visiedosis_logo.png"/>
+  <HighResolutionIconUrl DefaultValue="https://justsparknl.github.io/DocuTagger/assets/visiedosis_logo.png"/>
+  <SupportUrl DefaultValue="https://www.uninova.nl/"/>
   <AppDomains>
-    <AppDomain>https://www.uninova.nl/visiedosis/</AppDomain>
+    <AppDomain>https://justsparknl.github.io/DocuTagger</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Document"/>
   </Hosts>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://localhost:3000/taskpane.html"/>
+    <SourceLocation DefaultValue="https://justsparknl.github.io/DocuTagger/src/taskpane.html"/>
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
@@ -62,22 +62,22 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/visiedosis_logo.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/visiedosis_logo.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/visiedosis_logo.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://justsparknl.github.io/DocuTagger/assets/visiedosis_logo.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://justsparknl.github.io/DocuTagger/assets/visiedosis_logo.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://justsparknl.github.io/DocuTagger/assets/visiedosis_logo.png"/>
       </bt:Images>
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://go.microsoft.com/fwlink/?LinkId=276812"/>
-        <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/>
+        <!-- <bt:Url id="Commands.Url" DefaultValue="https://justsparknl.github.io/DocuTagger/src/commands/commands.html"/> -->
+        <bt:Url id="Taskpane.Url" DefaultValue="https://justsparknl.github.io/DocuTagger/src/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GetStarted.Title" DefaultValue="Laten we beginnen met je nieuwe VisieDosis Add-In!"/>
+        <bt:String id="GetStarted.Title" DefaultValue="Laten we beginnen met je nieuwe DocuTagger Add-In!"/>
         <bt:String id="CommandsGroup.Label" DefaultValue="Commands Group"/>
-        <bt:String id="TaskpaneButton.Label" DefaultValue="VisieDosis"/>
+        <bt:String id="TaskpaneButton.Label" DefaultValue="DocuTagger"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="GetStarted.Description" DefaultValue="VisieDosis is succesvol geladen in je office! Klik op het VisieDosis knop in je office lint om te beginnen."/>
+        <bt:String id="GetStarted.Description" DefaultValue="DocuTagger is succesvol geladen in je office! Klik op de DacuTagger knop in je office lint om te beginnen."/>
         <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Klik om het paneel te openen"/>
       </bt:LongStrings>
     </Resources>
