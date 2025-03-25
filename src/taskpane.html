@@ -96,7 +96,9 @@ function replaceID() {
   })
 
     // Use a placeholder value for testing if the custom property is not found
-    const replacementText = resultId ? resultId.value : "NO_ID_FOUND";
+    // const replacementText = resultId ? resultId.value : "NO_ID_FOUND";
+
+    const replacementText = resultId === "" ? "NO_ID_FOUND" : resultId;
 
     // Search for {{ID}} in the document and replace it with the replacement text
     const searchResults = context.document.body.search("{{ID}}", {matchCase: true, matchWholeWord: true});
