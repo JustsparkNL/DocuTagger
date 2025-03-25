@@ -44,9 +44,7 @@
         <!-- </ul>
         <p class="ms-font-l">Modify the source files, then click <b>Run</b>.</p> -->
         <div role="button" id="run" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
-            <button id="run" class="ms-Button">
-    <span class="ms-Button-label">Tag dit document</span>
-</button>
+            <span class="ms-Button-label">Tag dit document</span>
             <!-- <fluent-button appearance="accent">Genereer of voeg een ID toe</fluent-button> -->
         </div>
         <!-- <a>Hierdoot</a> -->
@@ -58,15 +56,9 @@ Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
     document.getElementById("sideload-msg").style.display = "none";
     document.getElementById("app-body").style.display = "flex";
-    // document.getElementById("run").onclick = replaceID;
+    document.getElementById("run").onclick = tryCatch(replaceID);
   }
 });
-
-$("#run").on("click", () => tryCatch(run));
-
-async function run() {
-    await replaceID();
-}
 
 async function replaceID() {
   return Word.run(async (context) => {
