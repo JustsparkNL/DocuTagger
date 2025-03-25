@@ -47,7 +47,7 @@
             <span class="ms-Button-label">Tag dit document</span>
             <!-- <fluent-button appearance="accent">Genereer of voeg een ID toe</fluent-button> -->
         </div>
-        <a>Hierdoot</a>
+        <!-- <a>Hierdoot</a> -->
         <p><label id="item-subject"></label></p>
     </main>
 </body>
@@ -65,12 +65,38 @@ function replaceID() {
     const metadataID = context.document.properties.customProperties;
     metadataID.load("key, value");
     await context.sync();
-
+    var resultId = "";
     // Find the custom property with key "VD_ID"
-    const resultId = metadataID.items.find(meta => meta.key === "DocID");
+    //const resultId = metadataID.items.find(meta => meta.key === "DocID");
+
+    const XML_NS = 'http://schemas.microsoft.com/office/2006/metadata/properties'
+  Office.context.document.customXmlParts.getByNamespaceAsync(XML_NS, (result) => {
+    if (result.status !== Office.AsyncResultStatus.Succeeded) return
+
+    const part = result.value[0]
+    part.getNodesAsync('*/documentManagement/*', (result) => {
+      if (result.status !== Office.AsyncResultStatus.Succeeded) return
+      result.value.forEach((node) => {
+        if (node.baseName === "_dlc_DocId") {
+          node.getXmlAsync(result => {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+              var res = result.value;
+              var resultId = res.substring(res.lastIndexOf('">') + 2, res.lastIndexOf("</"));
+              console.log(resultId);
+            } else {
+              console.error('failed to set node text', result.error)
+              //showNotification("Error:", e);
+            }
+          })
+
+        }
+
+      })
+    })
+  })
 
     // Use a placeholder value for testing if the custom property is not found
-    const replacementText = resultId ? resultId.value : "TESTED";
+    const replacementText = resultId ? resultId.value : "NO_ID_FOUND";
 
     // Search for {{ID}} in the document and replace it with the replacement text
     const searchResults = context.document.body.search("{{ID}}", {matchCase: true, matchWholeWord: true});
@@ -86,11 +112,11 @@ function replaceID() {
     }
 
     // Display all custom properties in the console for debugging
-    document.getElementById("test").innerHTML = "";
-    metadataID.items.forEach(item => {
-      console.log(`Custom property: Key = ${item.key}, Value = ${item.value}`);
-      document.getElementById("test").innerHTML += `Key: ${item.key}, Value: ${item.value}<br>`;
-    });
+    // document.getElementById("test").innerHTML = "";
+    // metadataID.items.forEach(item => {
+    //   console.log(`Custom property: Key = ${item.key}, Value = ${item.value}`);
+    //   document.getElementById("test").innerHTML += `Key: ${item.key}, Value: ${item.value}<br>`;
+    // });
 
     await context.sync();
   });
