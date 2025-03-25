@@ -61,16 +61,16 @@ Office.onReady((info) => {
 });
 function replaceID() {
       return Word.run(async (context) => {
-    // Load custom properties
-    const metadataID = context.document.properties.customProperties;
-    metadataID.load("key, value");
+    // // Load custom properties
+    // const metadataID = context.document.properties.customProperties;
+    // metadataID.load("key, value");
     await context.sync();
     var resultId = "";
     // Find the custom property with key "VD_ID"
     //const resultId = metadataID.items.find(meta => meta.key === "DocID");
 
     const XML_NS = 'http://schemas.microsoft.com/office/2006/metadata/properties'
-  Office.context.document.customXmlParts.getByNamespaceAsync(XML_NS, (result) => {
+    Office.context.document.customXmlParts.getByNamespaceAsync(XML_NS, (result) => {
     if (result.status !== Office.AsyncResultStatus.Succeeded) return
 
     const part = result.value[0]
@@ -98,7 +98,14 @@ function replaceID() {
     // Use a placeholder value for testing if the custom property is not found
     // const replacementText = resultId ? resultId.value : "NO_ID_FOUND";
 
-    const replacementText = resultId === "" ? "NO_ID_FOUND" : resultId;
+    var replacementText = "";
+    if(resultId == ""){
+      replacementText = "NO_ID_FOUND";
+    }
+    else{
+      replacementText = resultId;
+    }
+    // const replacementText = resultId === "" ? "NO_ID_FOUND" : resultId;
 
     // Search for {{ID}} in the document and replace it with the replacement text
     const searchResults = context.document.body.search("{{ID}}", {matchCase: true, matchWholeWord: true});
