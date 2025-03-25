@@ -81,7 +81,7 @@ function replaceID() {
           node.getXmlAsync(result => {
             if (result.status === Office.AsyncResultStatus.Succeeded) {
               var res = result.value;
-              var resultId = res.substring(res.lastIndexOf('">') + 2, res.lastIndexOf("</"));
+              resultId = res.substring(res.lastIndexOf('">') + 2, res.lastIndexOf("</"));
               console.log(resultId);
             } else {
               console.error('failed to set node text', result.error)
