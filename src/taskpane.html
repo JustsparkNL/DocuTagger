@@ -44,7 +44,9 @@
         <!-- </ul>
         <p class="ms-font-l">Modify the source files, then click <b>Run</b>.</p> -->
         <div role="button" id="run" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
-            <span class="ms-Button-label">Tag dit document</span>
+            <button id="run" class="ms-Button">
+    <span class="ms-Button-label">Tag dit document</span>
+</button>
             <!-- <fluent-button appearance="accent">Genereer of voeg een ID toe</fluent-button> -->
         </div>
         <!-- <a>Hierdoot</a> -->
@@ -56,80 +58,86 @@ Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
     document.getElementById("sideload-msg").style.display = "none";
     document.getElementById("app-body").style.display = "flex";
-    document.getElementById("run").onclick = replaceID;
+    // document.getElementById("run").onclick = replaceID;
   }
 });
-function replaceID() {
-      return Word.run(async (context) => {
-    // // Load custom properties
-    // const metadataID = context.document.properties.customProperties;
-    // metadataID.load("key, value");
-    await context.sync();
-    var resultId = "";
-    // Find the custom property with key "VD_ID"
-    //const resultId = metadataID.items.find(meta => meta.key === "DocID");
 
-    const XML_NS = 'http://schemas.microsoft.com/office/2006/metadata/properties'
-    Office.context.document.customXmlParts.getByNamespaceAsync(XML_NS, (result) => {
-    if (result.status !== Office.AsyncResultStatus.Succeeded) return
+$("#run").on("click", () => tryCatch(run));
 
-    const part = result.value[0]
-    part.getNodesAsync('*/documentManagement/*', (result) => {
-      if (result.status !== Office.AsyncResultStatus.Succeeded) return
-      result.value.forEach((node) => {
-        if (node.baseName === "_dlc_DocId") {
-          node.getXmlAsync(result => {
-            if (result.status === Office.AsyncResultStatus.Succeeded) {
-              var res = result.value;
-              resultId = res.substring(res.lastIndexOf('">') + 2, res.lastIndexOf("</"));
-              console.log(resultId);
-            } else {
-              console.error('failed to set node text', result.error)
-              //showNotification("Error:", e);
-            }
-          })
+async function run() {
+    await replaceID();
+}
 
-        }
+async function replaceID() {
+  return Word.run(async (context) => {
+    const XML_NS = "http://schemas.microsoft.com/office/2006/metadata/properties";
 
-      })
-    })
-  })
-  await context.sync();
+    let replacementText = "NOTFOUND";
 
-    // Use a placeholder value for testing if the custom property is not found
-    // const replacementText = resultId ? resultId.value : "NO_ID_FOUND";
+    // Gebruik een Promise om de custom XML waarde correct op te halen
+    const resultId = await getCustomXmlValue(XML_NS, "_dlc_DocId");
 
-    // var replacementText = "";
-    // if(resultId == ""){
-    //   replacementText = "NO_ID_FOUND";
-    // }
-    // else{
+    if (resultId) {
       replacementText = resultId;
-    // }
-    // const replacementText = resultId === "" ? "NO_ID_FOUND" : resultId;
+      console.log("Found resultId:", resultId);
+    } else {
+      console.warn("No resultId found, using 'NOTFOUND'");
+    }
 
-    // Search for {{ID}} in the document and replace it with the replacement text
-    const searchResults = context.document.body.search("{{ID}}", {matchCase: true, matchWholeWord: true});
+    // Zoek en vervang {{ID}} in het document
+    const searchResults = context.document.body.search("{{ID}}", { matchCase: true, matchWholeWord: true });
     context.load(searchResults, "text");
     await context.sync();
 
     if (searchResults.items.length > 0) {
-      searchResults.items.forEach(item => {
+      searchResults.items.forEach((item) => {
         item.insertText(replacementText, Word.InsertLocation.replace);
       });
     } else {
       console.log("The placeholder '{{ID}}' was not found in the document.");
     }
 
-    // Display all custom properties in the console for debugging
-    // document.getElementById("test").innerHTML = "";
-    // metadataID.items.forEach(item => {
-    //   console.log(`Custom property: Key = ${item.key}, Value = ${item.value}`);
-    //   document.getElementById("test").innerHTML += `Key: ${item.key}, Value: ${item.value}<br>`;
-    // });
-
     await context.sync();
   });
+}
+
+// Helper-functie om custom XML waarden op te halen met een Promise
+function getCustomXmlValue(namespace, nodeName) {
+  return new Promise((resolve, reject) => {
+    Office.context.document.customXmlParts.getByNamespaceAsync(namespace, (result) => {
+      if (result.status !== Office.AsyncResultStatus.Succeeded || result.value.length === 0) {
+        return resolve(null);
+      }
+
+      const part = result.value[0];
+      part.getNodesAsync("*/documentManagement/*", (result) => {
+        if (result.status !== Office.AsyncResultStatus.Succeeded) return resolve(null);
+
+        for (const node of result.value) {
+          if (node.baseName === nodeName) {
+            node.getXmlAsync((result) => {
+              if (result.status === Office.AsyncResultStatus.Succeeded) {
+                const res = result.value;
+                const extractedValue = res.substring(res.lastIndexOf('">') + 2, res.lastIndexOf("</"));
+                return resolve(extractedValue);
+              } else {
+                return resolve(null);
+              }
+            });
+          }
+        }
+      });
+    });
+  });
+}
+
+// Standaard error handler
+function tryCatch(callback) {
+  Promise.resolve()
+    .then(callback)
+    .catch(function(error) {
+      console.error(error);
+    });
 }
 
 </script>
