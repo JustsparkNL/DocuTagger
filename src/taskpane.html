@@ -1,4 +1,83 @@
-async function getSharePointDocumentId() {
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DocuTagger by Uninova</title>
+
+  <!-- Office.js -->
+  <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+
+  <!-- Fluent UI -->
+  <link rel="stylesheet" href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-core/11.0.0/css/fabric.min.css"/>
+</head>
+
+<body class="ms-font-m ms-welcome ms-Fabric">
+  <header class="ms-welcome__header ms-bgColor-neutralLighter">
+    <img height="90" src="visiedosis_logo.png" alt="uninova logo" title="Uninova" />
+    <h1 class="ms-font-su">VisieDosis Add-In</h1>
+  </header>
+
+  <section id="sideload-msg" class="ms-welcome__main">
+    <h2 class="ms-font-xl">
+      Please <a target="_blank" href="https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins#sideload-an-office-add-in-for-testing">
+      sideload</a> your add-in to see app body.
+    </h2>
+  </section>
+
+  <main id="app-body" class="ms-welcome__main" style="display:none;">
+    <p class="ms-font-m">
+      Klik om het SharePoint Document ID in te voegen op de plek van <code>{{ID}}</code> in je document.
+    </p>
+    <div role="button" id="run" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
+      <span class="ms-Button-label">Tag dit document</span>
+    </div>
+    <p id="status" class="ms-font-s" style="color:#0078d4;margin-top:1em;"></p>
+  </main>
+
+  <script>
+    Office.onReady((info) => {
+      if (info.host === Office.HostType.Word) {
+        document.getElementById("sideload-msg").style.display = "none";
+        document.getElementById("app-body").style.display = "flex";
+        document.getElementById("run").onclick = replaceID;
+      }
+    });
+
+    async function replaceID() {
+      setStatus("Document ID wordt opgehaald...");
+      try {
+        const docId = await getSharePointDocumentId();
+        if (!docId) {
+          setStatus("Geen Document ID gevonden. Controleer of het bestand in SharePoint staat en de Document ID-service actief is.");
+          return;
+        }
+
+        await Word.run(async (context) => {
+          const results = context.document.body.search("{{ID}}", { matchCase: true, matchWholeWord: true });
+          context.load(results, "text");
+          await context.sync();
+
+          if (results.items.length === 0) {
+            setStatus("Geen '{{ID}}' gevonden in het document.");
+            return;
+          }
+
+          for (const item of results.items) {
+            item.insertText(docId, Word.InsertLocation.replace);
+          }
+
+          await context.sync();
+          setStatus("Document succesvol getagd met ID: " + docId);
+        });
+      } catch (err) {
+        console.error(err);
+        setStatus("Fout: " + err.message);
+      }
+    }
+
+  async function getSharePointDocumentId() {
   try {
     const fileUrl = Office.context.document.url;
     if (!fileUrl || !fileUrl.includes("sharepoint.com")) return null;
@@ -40,3 +119,10 @@ async function getSharePointDocumentId() {
     return null;
   }
 }
+
+    function setStatus(message) {
+      document.getElementById("status").innerText = message;
+    }
+  </script>
+</body>
+</html>
