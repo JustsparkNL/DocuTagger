@@ -61,38 +61,60 @@ Office.onReady((info) => {
   }
 });
 
+// async function replaceID() {
+//   return Word.run(async (context) => {
+//     const XML_NS = "http://schemas.microsoft.com/office/2006/metadata/properties";
+
+//     let replacementText = "NOTFOUND";
+
+//     // Gebruik een Promise om de custom XML waarde correct op te halen
+//     const resultId = await getCustomXmlValue(XML_NS, "_dlc_DocId");
+
+//     if (resultId) {
+//       replacementText = resultId;
+//       console.log("Found resultId:", resultId);
+//     } else {
+//       console.warn("No resultId found, using 'NOTFOUND'");
+//     }
+
+//     // Zoek en vervang {{ID}} in het document
+//     const searchResults = context.document.body.search("{{ID}}", { matchCase: true, matchWholeWord: true });
+//     context.load(searchResults, "text");
+//     await context.sync();
+
+//     if (searchResults.items.length > 0) {
+//       searchResults.items.forEach((item) => {
+//         item.insertText(replacementText, Word.InsertLocation.replace);
+//       });
+//     } else {
+//       console.log("The placeholder '{{ID}}' was not found in the document.");
+//     }
+
+//     await context.sync();
+//   });
+// }
+
 async function replaceID() {
-  return Word.run(async (context) => {
-    const XML_NS = "http://schemas.microsoft.com/office/2006/metadata/properties";
+  await Word.run(async (context) => {
+    const props = context.document.properties.customProperties;
+    props.load("items");
+    await context.sync();
 
-    let replacementText = "NOTFOUND";
+    const idProp = props.items.find(p => p.key === "_dlc_DocId");
+    const replacementText = idProp ? idProp.value : "NOTFOUND";
 
-    // Gebruik een Promise om de custom XML waarde correct op te halen
-    const resultId = await getCustomXmlValue(XML_NS, "_dlc_DocId");
-
-    if (resultId) {
-      replacementText = resultId;
-      console.log("Found resultId:", resultId);
-    } else {
-      console.warn("No resultId found, using 'NOTFOUND'");
-    }
-
-    // Zoek en vervang {{ID}} in het document
     const searchResults = context.document.body.search("{{ID}}", { matchCase: true, matchWholeWord: true });
     context.load(searchResults, "text");
     await context.sync();
 
-    if (searchResults.items.length > 0) {
-      searchResults.items.forEach((item) => {
-        item.insertText(replacementText, Word.InsertLocation.replace);
-      });
-    } else {
-      console.log("The placeholder '{{ID}}' was not found in the document.");
+    for (const item of searchResults.items) {
+      item.insertText(replacementText, Word.InsertLocation.replace);
     }
 
     await context.sync();
   });
 }
+
 
 // Helper-functie om custom XML waarden op te halen met een Promise
 function getCustomXmlValue(namespace, nodeName) {
