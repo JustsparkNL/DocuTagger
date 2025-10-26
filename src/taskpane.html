@@ -1,123 +1,42 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DocuTagger by Uninova</title>
+async function getSharePointDocumentId() {
+  try {
+    const fileUrl = Office.context.document.url;
+    if (!fileUrl || !fileUrl.includes("sharepoint.com")) return null;
 
-  <!-- Office.js -->
-  <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+    const relativePath = new URL(fileUrl).pathname;
+    const siteUrl = fileUrl.split("/sites/")[0] + "/sites/" + fileUrl.split("/sites/")[1].split("/")[0];
+    const apiUrl = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${relativePath}')/ListItemAllFields`;
 
-  <!-- Fluent UI -->
-  <link rel="stylesheet" href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-core/11.0.0/css/fabric.min.css"/>
-</head>
-
-<body class="ms-font-m ms-welcome ms-Fabric">
-  <header class="ms-welcome__header ms-bgColor-neutralLighter">
-    <img height="90" src="visiedosis_logo.png" alt="uninova logo" title="Uninova" />
-    <h1 class="ms-font-su">VisieDosis Add-In</h1>
-  </header>
-
-  <section id="sideload-msg" class="ms-welcome__main">
-    <h2 class="ms-font-xl">
-      Please <a target="_blank" href="https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins#sideload-an-office-add-in-for-testing">
-      sideload</a> your add-in to see app body.
-    </h2>
-  </section>
-
-  <main id="app-body" class="ms-welcome__main" style="display:none;">
-    <p class="ms-font-m">
-      Klik om het SharePoint Document ID in te voegen op de plek van <code>{{ID}}</code> in je document.
-    </p>
-    <div role="button" id="run" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
-      <span class="ms-Button-label">Tag dit document</span>
-    </div>
-    <p id="status" class="ms-font-s" style="color:#0078d4;margin-top:1em;"></p>
-  </main>
-
-  <script>
-    Office.onReady((info) => {
-      if (info.host === Office.HostType.Word) {
-        document.getElementById("sideload-msg").style.display = "none";
-        document.getElementById("app-body").style.display = "flex";
-        document.getElementById("run").onclick = replaceID;
-      }
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: { "Accept": "application/atom+xml" },
+      credentials: "include"
     });
 
-    async function replaceID() {
-      setStatus("Document ID wordt opgehaald...");
-      try {
-        const docId = await getSharePointDocumentId();
-        if (!docId) {
-          setStatus("Geen Document ID gevonden. Controleer of het bestand in SharePoint staat en de Document ID-service actief is.");
-          return;
-        }
-
-        await Word.run(async (context) => {
-          const results = context.document.body.search("{{ID}}", { matchCase: true, matchWholeWord: true });
-          context.load(results, "text");
-          await context.sync();
-
-          if (results.items.length === 0) {
-            setStatus("Geen '{{ID}}' gevonden in het document.");
-            return;
-          }
-
-          for (const item of results.items) {
-            item.insertText(docId, Word.InsertLocation.replace);
-          }
-
-          await context.sync();
-          setStatus("Document succesvol getagd met ID: " + docId);
-        });
-      } catch (err) {
-        console.error(err);
-        setStatus("Fout: " + err.message);
-      }
+    if (!response.ok) {
+      console.warn("SharePoint API status:", response.status);
+      return null;
     }
 
-    async function getSharePointDocumentId() {
-      try {
-        const fileUrl = Office.context.document.url;
-        if (!fileUrl || !fileUrl.includes("sharepoint.com")) {
-          return null;
-        }
+    const text = await response.text();
 
-        // Relatief pad van het bestand
-        const relativePath = new URL(fileUrl).pathname;
-        // Basis-site-URL (werkt ook voor niet-standaard libraries)
-        const siteUrl = fileUrl.split("/Shared%20Documents")[0] || fileUrl.split("/sites/")[0];
-        const apiUrl = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${relativePath}')?$expand=ListItemAllFields`;
+    // Parse de XML response
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(text, "application/xml");
 
-        const response = await fetch(apiUrl, {
-          method: "GET",
-          headers: { "accept": "application/json;odata=verbose" },
-          credentials: "include"
-        });
+    // Zoek het element <d:OData__dlc_DocId>
+    const idNode = xmlDoc.getElementsByTagName("d:OData__dlc_DocId")[0];
+    const docId = idNode ? idNode.textContent : null;
 
-        if (!response.ok) {
-          console.warn("SharePoint API call mislukt:", response.status);
-          return null;
-        }
-
-        const data = await response.json();
-        // Controleer op beide varianten
-        const docId =
-          data?.d?.ListItemAllFields?.OData__dlc_DocId ||
-          data?.d?.ListItemAllFields?._dlc_DocId ||
-          null;
-
-        return docId;
-      } catch (error) {
-        console.error("getSharePointDocumentId error:", error);
-        return null;
-      }
+    if (!docId) {
+      console.warn("Geen OData__dlc_DocId gevonden in response");
+      return null;
     }
 
-    function setStatus(message) {
-      document.getElementById("status").innerText = message;
-    }
-  </script>
-</body>
-</html>
+    console.log("Gevonden Document ID:", docId);
+    return docId;
+  } catch (error) {
+    console.error("getSharePointDocumentId error:", error);
+    return null;
+  }
+}
