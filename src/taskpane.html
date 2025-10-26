@@ -1,160 +1,123 @@
-<!-- Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT License. -->
 <!DOCTYPE html>
 <html>
-
 <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>DocuTagger by Uninova</title>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DocuTagger by Uninova</title>
 
-    <!-- Office JavaScript API -->
-    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+  <!-- Office.js -->
+  <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
 
-    <!-- For more information on Fluent UI, visit https://developer.microsoft.com/fluentui#/. -->
-    <link rel="stylesheet" href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-core/11.0.0/css/fabric.min.css"/>
-
-    <!-- Template styles -->
-    <link href="taskpane.css" rel="stylesheet" type="text/css" />
+  <!-- Fluent UI -->
+  <link rel="stylesheet" href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-core/11.0.0/css/fabric.min.css"/>
 </head>
 
 <body class="ms-font-m ms-welcome ms-Fabric">
-    <header class="ms-welcome__header ms-bgColor-neutralLighter">
-        <img  height="90" src="visiedosis_logo.png" alt="uninova logo" title="Uninova" />
-        <h1 class="ms-font-su">VisieDosis Add-In</h1>
-    </header>
-    <section id="sideload-msg" class="ms-welcome__main">
-        <h2 class="ms-font-xl">Please <a target="_blank" href="https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins#sideload-an-office-add-in-for-testing">sideload</a> your add-in to see app body.</h2>
-    </section>
-    <main id="app-body" class="ms-welcome__main" style="display: none;">
-        <!-- <h2 class="ms-font-xl">Deze Add-in verzorgt het kenmerken van een document met een uniek ID, dat direct in een document gevoegd kan worden.</h2>
-        <ul class="ms-List ms-welcome__features">
-            <li class="ms-ListItem">
-                <i class="ms-Icon ms-Icon--Ribbon ms-font-xl"></i>
-                <span class="ms-font-m">Achieve more with Office integration</span>
-            </li>
-            <li class="ms-ListItem">
-                <i class="ms-Icon ms-Icon--Unlock ms-font-xl"></i>
-                <span class="ms-font-m">Unlock features and functionality</span>
-            </li> -->
-            <!-- <li class="ms-ListItem"> -->
-                <!-- <i class="ms-Icon ms-Icon--Design ms-font-xl"></i> -->
-                <span id='test' class="ms-font-m">Klik en insert een ID in je document.</span>
-            <!-- </li> -->
-        <!-- </ul>
-        <p class="ms-font-l">Modify the source files, then click <b>Run</b>.</p> -->
-        <div role="button" id="run" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
-            <span class="ms-Button-label">Tag dit document</span>
-            <!-- <fluent-button appearance="accent">Genereer of voeg een ID toe</fluent-button> -->
-        </div>
-        <!-- <a>Hierdoot</a> -->
-        <p><label id="item-subject"></label></p>
-    </main>
-</body>
-<script>
-Office.onReady((info) => {
-  if (info.host === Office.HostType.Word) {
-    document.getElementById("sideload-msg").style.display = "none";
-    document.getElementById("app-body").style.display = "flex";
-    document.getElementById("run").onclick = replaceID;
-    tryCatch(replaceID);
-  }
-});
+  <header class="ms-welcome__header ms-bgColor-neutralLighter">
+    <img height="90" src="visiedosis_logo.png" alt="uninova logo" title="Uninova" />
+    <h1 class="ms-font-su">VisieDosis Add-In</h1>
+  </header>
 
-// async function replaceID() {
-//   return Word.run(async (context) => {
-//     const XML_NS = "http://schemas.microsoft.com/office/2006/metadata/properties";
+  <section id="sideload-msg" class="ms-welcome__main">
+    <h2 class="ms-font-xl">
+      Please <a target="_blank" href="https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins#sideload-an-office-add-in-for-testing">
+      sideload</a> your add-in to see app body.
+    </h2>
+  </section>
 
-//     let replacementText = "NOTFOUND";
+  <main id="app-body" class="ms-welcome__main" style="display:none;">
+    <p class="ms-font-m">
+      Klik om het SharePoint Document ID in te voegen op de plek van <code>{{ID}}</code> in je document.
+    </p>
+    <div role="button" id="run" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
+      <span class="ms-Button-label">Tag dit document</span>
+    </div>
+    <p id="status" class="ms-font-s" style="color:#0078d4;margin-top:1em;"></p>
+  </main>
 
-//     // Gebruik een Promise om de custom XML waarde correct op te halen
-//     const resultId = await getCustomXmlValue(XML_NS, "_dlc_DocId");
+  <script>
+    Office.onReady((info) => {
+      if (info.host === Office.HostType.Word) {
+        document.getElementById("sideload-msg").style.display = "none";
+        document.getElementById("app-body").style.display = "flex";
+        document.getElementById("run").onclick = replaceID;
+      }
+    });
 
-//     if (resultId) {
-//       replacementText = resultId;
-//       console.log("Found resultId:", resultId);
-//     } else {
-//       console.warn("No resultId found, using 'NOTFOUND'");
-//     }
+    async function replaceID() {
+      setStatus("Document ID wordt opgehaald...");
+      try {
+        const docId = await getSharePointDocumentId();
+        if (!docId) {
+          setStatus("Geen Document ID gevonden. Controleer of het bestand in SharePoint staat en de Document ID-service actief is.");
+          return;
+        }
 
-//     // Zoek en vervang {{ID}} in het document
-//     const searchResults = context.document.body.search("{{ID}}", { matchCase: true, matchWholeWord: true });
-//     context.load(searchResults, "text");
-//     await context.sync();
+        await Word.run(async (context) => {
+          const results = context.document.body.search("{{ID}}", { matchCase: true, matchWholeWord: true });
+          context.load(results, "text");
+          await context.sync();
 
-//     if (searchResults.items.length > 0) {
-//       searchResults.items.forEach((item) => {
-//         item.insertText(replacementText, Word.InsertLocation.replace);
-//       });
-//     } else {
-//       console.log("The placeholder '{{ID}}' was not found in the document.");
-//     }
+          if (results.items.length === 0) {
+            setStatus("Geen '{{ID}}' gevonden in het document.");
+            return;
+          }
 
-//     await context.sync();
-//   });
-// }
+          for (const item of results.items) {
+            item.insertText(docId, Word.InsertLocation.replace);
+          }
 
-async function replaceID() {
-  await Word.run(async (context) => {
-    const props = context.document.properties.customProperties;
-    props.load("items");
-    await context.sync();
-
-    const idProp = props.items.find(p => p.key === "_dlc_DocId");
-    const replacementText = idProp ? idProp.value : "NOTFOUND";
-
-    const searchResults = context.document.body.search("{{ID}}", { matchCase: true, matchWholeWord: true });
-    context.load(searchResults, "text");
-    await context.sync();
-
-    for (const item of searchResults.items) {
-      item.insertText(replacementText, Word.InsertLocation.replace);
+          await context.sync();
+          setStatus("Document succesvol getagd met ID: " + docId);
+        });
+      } catch (err) {
+        console.error(err);
+        setStatus("Fout: " + err.message);
+      }
     }
 
-    await context.sync();
-  });
-}
-
-
-// Helper-functie om custom XML waarden op te halen met een Promise
-function getCustomXmlValue(namespace, nodeName) {
-  return new Promise((resolve, reject) => {
-    Office.context.document.customXmlParts.getByNamespaceAsync(namespace, (result) => {
-      if (result.status !== Office.AsyncResultStatus.Succeeded || result.value.length === 0) {
-        return resolve(null);
-      }
-
-      const part = result.value[0];
-      part.getNodesAsync("*/documentManagement/*", (result) => {
-        if (result.status !== Office.AsyncResultStatus.Succeeded) return resolve(null);
-
-        for (const node of result.value) {
-          if (node.baseName === nodeName) {
-            node.getXmlAsync((result) => {
-              if (result.status === Office.AsyncResultStatus.Succeeded) {
-                const res = result.value;
-                const extractedValue = res.substring(res.lastIndexOf('">') + 2, res.lastIndexOf("</"));
-                return resolve(extractedValue);
-              } else {
-                return resolve(null);
-              }
-            });
-          }
+    async function getSharePointDocumentId() {
+      try {
+        const fileUrl = Office.context.document.url;
+        if (!fileUrl || !fileUrl.includes("sharepoint.com")) {
+          return null;
         }
-      });
-    });
-  });
-}
 
-// Standaard error handler
-function tryCatch(callback) {
-  Promise.resolve()
-    .then(callback)
-    .catch(function(error) {
-      console.error(error);
-    });
-}
+        // Relatief pad van het bestand
+        const relativePath = new URL(fileUrl).pathname;
+        // Basis-site-URL (werkt ook voor niet-standaard libraries)
+        const siteUrl = fileUrl.split("/Shared%20Documents")[0] || fileUrl.split("/sites/")[0];
+        const apiUrl = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${relativePath}')?$expand=ListItemAllFields`;
 
-</script>
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: { "accept": "application/json;odata=verbose" },
+          credentials: "include"
+        });
 
+        if (!response.ok) {
+          console.warn("SharePoint API call mislukt:", response.status);
+          return null;
+        }
+
+        const data = await response.json();
+        // Controleer op beide varianten
+        const docId =
+          data?.d?.ListItemAllFields?.OData__dlc_DocId ||
+          data?.d?.ListItemAllFields?._dlc_DocId ||
+          null;
+
+        return docId;
+      } catch (error) {
+        console.error("getSharePointDocumentId error:", error);
+        return null;
+      }
+    }
+
+    function setStatus(message) {
+      document.getElementById("status").innerText = message;
+    }
+  </script>
+</body>
 </html>
