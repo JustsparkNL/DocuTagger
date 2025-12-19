@@ -37,92 +37,184 @@
   </main>
 
   <script>
-    Office.onReady((info) => {
-      if (info.host === Office.HostType.Word) {
-        document.getElementById("sideload-msg").style.display = "none";
-        document.getElementById("app-body").style.display = "flex";
-        document.getElementById("run").onclick = replaceID;
+console.log("Word add-in script geladen");
+
+Office.onReady((info) => {
+  console.log("Office.onReady:", info);
+
+  if (info.host === Office.HostType.Word) {
+    document.getElementById("sideload-msg").style.display = "none";
+    document.getElementById("app-body").style.display = "flex";
+    document.getElementById("run").onclick = replaceID;
+
+    console.log("Word host gedetecteerd, UI geïnitialiseerd");
+  }
+});
+
+/* =========================
+   Hoofdfunctie
+========================= */
+async function replaceID() {
+  console.log("replaceID gestart");
+  setStatus("Document ID wordt opgehaald...");
+
+  try {
+    const docId = await resolveDocumentId();
+    const replacementText = docId ?? "NOTFOUND";
+
+    console.log("Te gebruiken Document ID:", replacementText);
+
+    await Word.run(async (context) => {
+      const results = context.document.body.search("{{ID}}", {
+        matchCase: true,
+        matchWholeWord: true
+      });
+
+      context.load(results, "text");
+      await context.sync();
+
+      console.log("Aantal {{ID}} placeholders:", results.items.length);
+
+      if (results.items.length === 0) {
+        setStatus("Geen '{{ID}}' gevonden in het document.");
+        return;
       }
+
+      results.items.forEach(item => {
+        item.insertText(replacementText, Word.InsertLocation.replace);
+      });
+
+      await context.sync();
+      console.log("Placeholders vervangen");
+
+      setStatus("Document succesvol getagd met ID: " + replacementText);
     });
+  } catch (error) {
+    console.error("replaceID fout:", error);
+    setStatus("Fout bij vervangen van Document ID");
+  }
+}
 
-    async function replaceID() {
-      setStatus("Document ID wordt opgehaald...");
-      try {
-        const docId = await getSharePointDocumentId();
-        if (!docId) {
-          setStatus("Geen Document ID gevonden. Controleer of het bestand in SharePoint staat en de Document ID-service actief is.");
-          return;
-        }
+/* =========================
+   Document ID resolver
+========================= */
+async function resolveDocumentId() {
+  console.log("resolveDocumentId gestart");
 
-        await Word.run(async (context) => {
-          const results = context.document.body.search("{{ID}}", { matchCase: true, matchWholeWord: true });
-          context.load(results, "text");
-          await context.sync();
+  const spId = await getSharePointDocumentId();
+  if (spId) {
+    console.log("Document ID via SharePoint verkregen");
+    return spId;
+  }
 
-          if (results.items.length === 0) {
-            setStatus("Geen '{{ID}}' gevonden in het document.");
-            return;
-          }
+  console.warn("SharePoint ID niet beschikbaar, fallback naar lokaal document");
 
-          for (const item of results.items) {
-            item.insertText(docId, Word.InsertLocation.replace);
-          }
+  const XML_NS = "http://schemas.microsoft.com/office/2006/metadata/properties";
+  const localId = await getCustomXmlValue(XML_NS, "_dlc_DocId");
 
-          await context.sync();
-          setStatus("Document succesvol getagd met ID: " + docId);
-        });
-      } catch (err) {
-        console.error(err);
-        setStatus("Fout: " + err.message);
-      }
-    }
+  if (localId) {
+    console.log("Document ID via custom XML verkregen");
+    return localId;
+  }
 
-  async function getSharePointDocumentId() {
+  console.warn("Geen Document ID gevonden via SharePoint of custom XML");
+  return null;
+}
+
+/* =========================
+   SharePoint Document ID
+========================= */
+async function getSharePointDocumentId() {
+  console.log("getSharePointDocumentId gestart");
+
   try {
     const fileUrl = Office.context.document.url;
-    if (!fileUrl || !fileUrl.includes("sharepoint.com")) return null;
+    console.log("Document URL:", fileUrl);
 
-    const relativePath = new URL(fileUrl).pathname;
-    const siteUrl = fileUrl.split("/sites/")[0] + "/sites/" + fileUrl.split("/sites/")[1].split("/")[0];
-    const apiUrl = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${relativePath}')/ListItemAllFields`;
-
-    const response = await fetch(apiUrl, {
-      method: "GET",
-      headers: { "Accept": "application/atom+xml" },
-      credentials: "include"
-    });
-
-    if (!response.ok) {
-      console.warn("SharePoint API status:", response.status);
+    if (!fileUrl || !fileUrl.includes("sharepoint.com")) {
+      console.warn("Document staat niet op SharePoint");
       return null;
     }
 
-    const text = await response.text();
+    const relativePath = new URL(fileUrl).pathname;
+    const siteName = fileUrl.split("/sites/")[1] ?.split("/")[0];
+    const siteUrl = fileUrl.split("/sites/")[0] + "/sites/" + siteName;
 
-    // Parse de XML response
+    const apiUrl =
+      `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${relativePath}')/ListItemAllFields`;
+
+    console.log("SharePoint API URL:", apiUrl);
+
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: { Accept: "application/atom+xml" },
+      credentials: "include"
+    });
+
+    console.log("SharePoint API status:", response.status);
+
+    if (!response.ok) return null;
+
+    const text = await response.text();
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(text, "application/xml");
 
-    // Zoek het element <d:OData__dlc_DocId>
     const idNode = xmlDoc.getElementsByTagName("d:OData__dlc_DocId")[0];
     const docId = idNode ? idNode.textContent : null;
 
     if (!docId) {
-      console.warn("Geen OData__dlc_DocId gevonden in response");
+      console.warn("Geen Document ID in SharePoint response");
       return null;
     }
 
-    console.log("Gevonden Document ID:", docId);
+    console.log("SharePoint Document ID:", docId);
     return docId;
   } catch (error) {
-    console.error("getSharePointDocumentId error:", error);
+    console.error("SharePoint fout:", error);
     return null;
   }
 }
 
-    function setStatus(message) {
-      document.getElementById("status").innerText = message;
+/* =========================
+   Lokaal Document ID (XML)
+========================= */
+async function getCustomXmlValue(namespace, localName) {
+  console.log("getCustomXmlValue:", namespace, localName);
+
+  return Word.run(async (context) => {
+    const parts = context.document.customXmlParts.getByNamespace(namespace);
+    context.load(parts, "items");
+    await context.sync();
+
+    console.log("Aantal customXmlParts:", parts.items.length);
+
+    for (const part of parts.items) {
+      const xml = part.getXml();
+      await context.sync();
+
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xml.value, "application/xml");
+      const node = xmlDoc.getElementsByTagName(localName)[0];
+
+      if (node && node.textContent) {
+        console.log("Custom XML waarde gevonden:", node.textContent);
+        return node.textContent;
+      }
     }
+
+    console.warn("Custom XML waarde niet gevonden:", localName);
+    return null;
+  });
+}
+
+/* =========================
+   Status helper
+========================= */
+function setStatus(message) {
+  console.log("Status:", message);
+  document.getElementById("status").innerText = message;
+}
+
   </script>
 </body>
 </html>
