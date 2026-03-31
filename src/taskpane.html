@@ -158,18 +158,16 @@
 
               if (!para.text || !para.text.includes("{{ID}}")) continue;
 
-              console.log("{{ID}} gevonden in paragraaf:", para.text);
-
-              const range = para.getRange();
-              context.load(range, "text");
+              const shapeResults = para.search("{{ID}}", { matchCase: true, matchWholeWord: false });
+              context.load(shapeResults, "text");
               await context.sync();
 
-              const newText = range.text.replace(/\{\{ID\}\}/g, replacementText);
-              range.insertText(newText, Word.InsertLocation.replace);
+              shapeResults.items.forEach(item => {
+                item.insertText(replacementText, Word.InsertLocation.replace);
+              });
               await context.sync();
 
-              replaced++;
-              console.log("Paragraaf vervangen met:", newText);
+              replaced += shapeResults.items.length;
             }
           } catch (e) {
             console.warn("Shape overgeslagen:", e.message);
